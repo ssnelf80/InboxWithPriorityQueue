@@ -1,14 +1,14 @@
-using InboxPriorityQueue;
 using InboxPriorityQueue.Context;
+using InboxPriorityQueue.InboxBatch;
 using InboxPriorityQueue.InboxPoll;
 using InboxPriorityQueue.Processors;
 using InboxPriorityQueue.Worker;
-using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddSingleton<ILoggerFactory, LoggerFactory>();
 builder.Services.AddSingleton(typeof(ILogger<>), typeof(Logger<>));
 builder.Services.AddTransient<IInboxProcessor, EmptyInboxProcessor>();
+builder.Services.AddSingleton<InboxBatchWriter>();
 
 // Add services to the container.
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
@@ -35,22 +35,16 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.MigrateInboxDatabase();
 
-app.MapGet("/testApi", async () =>
+app.MapGet("/testApi", () =>
     {
         using var scope1 = app.Services.CreateScope();
-        var manager1 = scope1.ServiceProvider.GetRequiredService<InboxWorker>();
-        for (var i = 0; i < 10; i++)
+        var writer = scope1.ServiceProvider.GetRequiredService<InboxBatchWriter>();
+        for (var i = 0; i < 250_000; i++)
         {
-            var values = new string[100_000];
-            for (var j = 0; j < 15_000; j++)
-            {
-                values[j] = Guid.NewGuid().ToString("N");
-            }
-            
-            await manager1.AddOrUpdateInboxItemsAsync(values);
+            writer.Enqueue(Guid.NewGuid().ToString("N"));
         }
         
-        return await manager1.IsEmptyQueueAsync(default);
+        return true;
     })
     .WithName("testApi")
     .WithOpenApi();
