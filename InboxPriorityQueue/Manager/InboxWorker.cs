@@ -23,6 +23,26 @@ public class InboxWorker
         _context = context;
         _processor = processor;
     }
+    
+    
+    
+    public async Task<IEnumerable<int>> GetProgressIdsAsync(CancellationToken cancellationToken = default)
+    {
+        using var db = _context.OpenConnection();
+        return await db.QueryAsync<int>(QueryBuilder.GetProgressIds, cancellationToken);
+    }
+
+    public async Task<int> DeleteDoneItemsAsync(CancellationToken cancellationToken = default)
+    {
+        using var db = _context.OpenConnection();
+        return await db.ExecuteAsync(QueryBuilder.DeleteDoneItems, cancellationToken);
+    }
+    
+    public async Task<int> ReturnZombieToQueueAsync(IEnumerable<int> ids, CancellationToken cancellationToken = default)
+    {
+        using var db = _context.OpenConnection();
+        return await db.ExecuteAsync(QueryBuilder.ReturnZombieToQueue(ids), cancellationToken);
+    }
 
     public Task<int> AddOrUpdateInboxItemAsync(string value, Priority priority = Priority.Low,
         CancellationToken cancellationToken = default)
