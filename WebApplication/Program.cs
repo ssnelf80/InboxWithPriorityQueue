@@ -39,7 +39,7 @@ app.MapGet("/testApi", async () =>
     {
         using var scope1 = app.Services.CreateScope();
         var manager1 = scope1.ServiceProvider.GetRequiredService<InboxManager>();
-        for (var i = 0; i < 100; i++)
+        for (var i = 0; i < 10; i++)
         {
             var values = new string[100_000];
             for (var j = 0; j < 15_000; j++)

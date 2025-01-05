@@ -8,11 +8,13 @@ namespace InboxPriorityQueue.InboxPoll;
 
 public class InboxPollService : IHostedService, IDisposable, IAsyncDisposable
 {
-    private readonly Timer _timer;
+    private readonly Timer _timerPoll;
+    private readonly Timer _timerCleanUp;
     private readonly int _pollDelayMs;
     private readonly int _workerCount;
 
     private readonly InboxManager[] _inboxManagers;
+    private List<int> _currentProcesses = new();
     
     public InboxPollService(IOptions<InboxPollConfiguration> configOptions, InboxContext context, IInboxProcessor inboxProcessor)
     {
@@ -23,7 +25,7 @@ public class InboxPollService : IHostedService, IDisposable, IAsyncDisposable
         for (var i = 0; i < _inboxManagers.Length; i++)
             _inboxManagers[i] = new InboxManager(context, inboxProcessor);
         
-        _timer = new Timer(PollCallback, null, Timeout.Infinite, Timeout.Infinite);
+        _timerPoll = new Timer(PollCallback, null, Timeout.Infinite, Timeout.Infinite);
     }
     private async void PollCallback(object? state)
     {
@@ -45,30 +47,54 @@ public class InboxPollService : IHostedService, IDisposable, IAsyncDisposable
         }
         finally
         {
-            _timer.Change(_pollDelayMs, Timeout.Infinite);
+            _timerPoll.Change(_pollDelayMs, Timeout.Infinite);
+        }
+    }
+    
+    private async void CleanUpCallback(object? state)
+    {
+        try
+        {
+            if (await _inboxManagers[0].IsEmptyQueueAsync())
+                return;
+
+            foreach (var inboxManager in _inboxManagers)
+            {
+                if (inboxManager.IsCycleProcessing)
+                    continue;
+                
+                _ = inboxManager.CycleProcessingAsync();
+                    
+                if (await _inboxManagers[0].IsEmptyQueueAsync())
+                    return;
+            }
+        }
+        finally
+        {
+            _timerPoll.Change(_pollDelayMs, Timeout.Infinite);
         }
     }
 
     public Task StartAsync(CancellationToken cancellationToken)
     {
-        _timer.Change(0, Timeout.Infinite);
+        _timerPoll.Change(0, Timeout.Infinite);
         return Task.CompletedTask;
     }
 
     public Task StopAsync(CancellationToken cancellationToken)
     {
-        _timer.Change(Timeout.Infinite, Timeout.Infinite);
+        _timerPoll.Change(Timeout.Infinite, Timeout.Infinite);
         return Task.CompletedTask;
     }
 
     public void Dispose()
     {
-        _timer.Dispose();
+        _timerPoll.Dispose();
     }
 
     public async ValueTask DisposeAsync()
     {
-        await _timer.DisposeAsync();
+        await _timerPoll.DisposeAsync();
     }
 }
 
