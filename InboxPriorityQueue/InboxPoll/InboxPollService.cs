@@ -13,42 +13,40 @@ public class InboxPollService : IHostedService, IDisposable, IAsyncDisposable
     private readonly int _pollDelayMs;
     private readonly int _workerCount;
 
-    private readonly InboxManager[] _inboxManagers;
+    private readonly InboxWorker[] _inboxManagers;
     private List<int> _currentProcesses = new();
     
     public InboxPollService(IOptions<InboxPollConfiguration> configOptions, InboxContext context, IInboxProcessor inboxProcessor)
     {
         var config = configOptions.Value ?? new InboxPollConfiguration();
         _pollDelayMs = config.PollIntervalMs;
-        _inboxManagers = new InboxManager[config.WorkerCount];
+        _inboxManagers = new InboxWorker[config.WorkerCount];
         
         for (var i = 0; i < _inboxManagers.Length; i++)
-            _inboxManagers[i] = new InboxManager(context, inboxProcessor);
+            _inboxManagers[i] = new InboxWorker(context, inboxProcessor);
         
         _timerPoll = new Timer(PollCallback, null, Timeout.Infinite, Timeout.Infinite);
     }
-    private async void PollCallback(object? state)
+    private void PollCallback(object? state)
     {
-        try
+        Task.Run(async () =>
         {
-            if (await _inboxManagers[0].IsEmptyQueueAsync())
-                return;
-
-            foreach (var inboxManager in _inboxManagers)
+            try
             {
-                if (inboxManager.IsCycleProcessing)
-                    continue;
-                
-                _ = inboxManager.CycleProcessingAsync();
-                    
                 if (await _inboxManagers[0].IsEmptyQueueAsync())
                     return;
+
+                Parallel.ForEach(_inboxManagers.Where(x => !x.IsCycleProcessing), inboxManager =>
+                {
+                    _ = inboxManager.CycleProcessingAsync();
+                });
+               
             }
-        }
-        finally
-        {
-            _timerPoll.Change(_pollDelayMs, Timeout.Infinite);
-        }
+            finally
+            {
+                _timerPoll.Change(_pollDelayMs, Timeout.Infinite);
+            }
+        });
     }
     
     private async void CleanUpCallback(object? state)

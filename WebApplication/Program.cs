@@ -18,7 +18,7 @@ builder.Services.AddSwaggerGen();
 builder.Services.Configure<InboxPollConfiguration>(builder.Configuration.GetSection("InboxPollConfiguration"));
 
 builder.Services.AddSingleton<InboxContext>();
-builder.Services.AddTransient<InboxManager>();
+builder.Services.AddTransient<InboxWorker>();
 builder.Services.AddHostedService<InboxPollService>();
 
 builder.Services.ConfigureFluentMigrator();
@@ -38,7 +38,7 @@ app.MigrateInboxDatabase();
 app.MapGet("/testApi", async () =>
     {
         using var scope1 = app.Services.CreateScope();
-        var manager1 = scope1.ServiceProvider.GetRequiredService<InboxManager>();
+        var manager1 = scope1.ServiceProvider.GetRequiredService<InboxWorker>();
         for (var i = 0; i < 10; i++)
         {
             var values = new string[100_000];

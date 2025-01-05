@@ -8,7 +8,7 @@ using Microsoft.Extensions.Primitives;
 
 namespace InboxPriorityQueue.Manager;
 
-public class InboxManager
+public class InboxWorker
 {
     private readonly InboxContext _context;
     private readonly IInboxProcessor _processor;
@@ -18,7 +18,7 @@ public class InboxManager
 
     public bool IsCycleProcessing => _isCycleProcessing;
 
-    public InboxManager(InboxContext context, IInboxProcessor processor)
+    public InboxWorker(InboxContext context, IInboxProcessor processor)
     {
         _context = context;
         _processor = processor;
@@ -38,6 +38,10 @@ public class InboxManager
         return await db.ExecuteAsync(QueryBuilder.GetAddOrUpdateQuery(values, priority), cancellationToken);
     }
 
+    /// <summary>
+    /// Запуск цикличного потребления очереди воркером
+    /// </summary>
+    /// <param name="cancellationToken"></param>
     public async Task CycleProcessingAsync(CancellationToken cancellationToken = default)
     {
         if (!TryStartCycleProcessing())
@@ -57,6 +61,11 @@ public class InboxManager
         }
     }
 
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
     public async Task<bool> IsEmptyQueueAsync(CancellationToken cancellationToken = default)
     {
         using var db = _context.OpenConnection();
