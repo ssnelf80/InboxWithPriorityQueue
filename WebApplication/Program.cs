@@ -1,8 +1,8 @@
 using InboxPriorityQueue;
 using InboxPriorityQueue.Context;
 using InboxPriorityQueue.InboxPoll;
-using InboxPriorityQueue.Manager;
 using InboxPriorityQueue.Processors;
+using InboxPriorityQueue.Worker;
 using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);

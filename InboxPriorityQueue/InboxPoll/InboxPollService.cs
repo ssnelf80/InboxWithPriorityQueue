@@ -1,18 +1,20 @@
 ﻿using InboxPriorityQueue.Context;
-using InboxPriorityQueue.Manager;
 using InboxPriorityQueue.Processors;
+using InboxPriorityQueue.Worker;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 
 namespace InboxPriorityQueue.InboxPoll;
 
+/// <summary>
+/// Фоновая служба для запуска воркеров
+/// </summary>
 public class InboxPollService : IHostedService, IDisposable, IAsyncDisposable
 {
     private readonly Timer _timerPoll;
     private readonly Timer _timerCleanUp;
     private readonly int _pollDelayMs;
     private readonly int _cleanUpDelayMs;
-    private readonly int _workerCount;
 
     private readonly InboxWorker[] _inboxWorkers;
     private readonly HashSet<int> _previousProcesses = new();

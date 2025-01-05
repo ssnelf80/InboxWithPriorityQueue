@@ -1,12 +1,10 @@
 ﻿using System.Data;
-using System.Text;
 using Dapper;
 using InboxPriorityQueue.Context;
 using InboxPriorityQueue.Models;
 using InboxPriorityQueue.Processors;
-using Microsoft.Extensions.Primitives;
 
-namespace InboxPriorityQueue.Manager;
+namespace InboxPriorityQueue.Worker;
 
 public class InboxWorker
 {
@@ -23,8 +21,6 @@ public class InboxWorker
         _context = context;
         _processor = processor;
     }
-    
-    
     
     public async Task<IEnumerable<int>> GetProgressIdsAsync(CancellationToken cancellationToken = default)
     {
@@ -44,10 +40,24 @@ public class InboxWorker
         return await db.ExecuteAsync(QueryBuilder.ReturnZombieToQueue(ids), cancellationToken);
     }
 
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="value"></param>
+    /// <param name="priority"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
     public Task<int> AddOrUpdateInboxItemAsync(string value, Priority priority = Priority.Low,
         CancellationToken cancellationToken = default)
         => AddOrUpdateInboxItemsAsync([value], priority, cancellationToken);
 
+    /// <summary>
+    /// Добавляет значения в очередь. Дублирующиеся значения будут проигнорированы
+    /// </summary>
+    /// <param name="values"></param>
+    /// <param name="priority"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
     public async Task<int> AddOrUpdateInboxItemsAsync(string[] values, Priority priority = Priority.Low,
         CancellationToken cancellationToken = default)
     {

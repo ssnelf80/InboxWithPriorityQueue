@@ -1,6 +1,6 @@
 ﻿using InboxPriorityQueue.Models;
 
-namespace InboxPriorityQueue.Manager;
+namespace InboxPriorityQueue.Worker;
 
 public static class QueryBuilder
 {
